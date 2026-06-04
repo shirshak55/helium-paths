@@ -40,14 +40,30 @@ jobs:
       - run: npm test
 
   # Integration test: install the real Helium browser, then launch it.
+  # Linux covers the official deb repo plus the release asset formats upstream
+  # publishes: .deb, AppImage, and tarball. Flatpak is not included because
+  # upstream does not support it. Snapcraft currently has helium-miner and
+  # helium-pktfwd, but no installable Helium browser snap.
   e2e:
-    name: e2e (${{ matrix.os }}, node ${{ matrix.node }})
-    runs-on: ${{ matrix.os }}
+    name: e2e (${{ matrix.target.os }}, ${{ matrix.target.install }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.target.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         node: [22, 24, 26]
+        target:
+          - os: ubuntu-latest
+            install: deb-repo
+          - os: ubuntu-latest
+            install: deb-file
+          - os: ubuntu-latest
+            install: appimage
+          - os: ubuntu-latest
+            install: tarball
+          - os: windows-latest
+            install: winget
+          - os: macos-latest
+            install: brew
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,18 +72,18 @@ jobs:
           cache: npm
 
       - name: Install Helium (macOS)
-        if: runner.os == 'macOS'
+        if: matrix.target.install == 'brew'
         run: brew install --cask helium-browser
 
       - name: Install Helium (Windows)
-        if: runner.os == 'Windows'
+        if: matrix.target.install == 'winget'
         shell: pwsh
         run: |
           winget source update
           winget install --id ImputNet.Helium --exact --source winget --accept-source-agreements --accept-package-agreements --silent --disable-interactivity
 
-      - name: Install Helium (Linux)
-        if: runner.os == 'Linux'
+      - name: Install Helium (Linux deb repo)
+        if: matrix.target.install == 'deb-repo'
         run: |
           sudo install -d -m 0755 /etc/apt/keyrings
           curl -fsSL https://raw.githubusercontent.com/imputnet/helium-linux/main/pubkey.asc | sudo gpg --dearmor -o /etc/apt/keyrings/helium.gpg
@@ -76,6 +92,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y helium-bin
 
+      - name: Install Helium (Linux deb file)
+        if: matrix.target.install == 'deb-file'
+        run: |
+          npm run download:helium -- --format deb
+          deb="$(find . -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$deb"
+          sudo apt-get update
+          sudo apt-get install -y "./$deb"
+
+      - name: Install Helium (Linux AppImage)
+        if: matrix.target.install == 'appimage'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 || sudo apt-get install -y libfuse2t64 || true
+          npm run download:helium -- --format appimage
+          appimage="$(find . -maxdepth 1 -name '*.AppImage' -print -quit)"
+          test -n "$appimage"
+          sudo install -Dm755 "$appimage" /opt/helium/helium.AppImage
+          sudo tee /usr/share/applications/helium.desktop > /dev/null <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Helium
+          Exec=/opt/helium/helium.AppImage %U
+          EOF
+
+      - name: Install Helium (Linux tarball)
+        if: matrix.target.install == 'tarball'
+        run: |
+          npm run download:helium -- --format tarball
+          tarball="$(find . -maxdepth 1 -name '*.tar.xz' -print -quit)"
+          test -n "$tarball"
+          sudo mkdir -p /opt/helium-tarball
+          sudo tar -xf "$tarball" -C /opt/helium-tarball
+          helium_bin="$(find /opt/helium-tarball -type f \( -name helium -o -name helium-wrapper \) -perm -111 -print -quit)"
+          test -n "$helium_bin"
+          sudo tee /usr/share/applications/helium.desktop > /dev/null <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Helium
+          Exec=$helium_bin %U
+          EOF
+
       - run: npm ci
       - run: npm run build
       - run: npm run test:e2e
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: ${{ matrix.target.install == 'appimage' && '1' || '' }}

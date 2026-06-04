@@ -202,20 +202,6 @@ test("linux: ignores desktop Exec= option tokens that mention helium", () => {
 	);
 });
 
-test("linux: skips a flatpak wrapper and resolves the Helium command", () => {
-	withLinuxDesktop(
-		{
-			fileName: "net.imput.helium.desktop",
-			exec: "/usr/bin/flatpak run helium-appimage @@u",
-			makeBinary: "helium-appimage",
-			putBinaryOnPath: true,
-		},
-		({ binaryPath }) => {
-			assert.equal(getHeliumPath(), binaryPath);
-		},
-	);
-});
-
 test("unsupported platforms throw a helium-paths error", () => {
 	const err = withPlatform("aix", () => captureError(getHeliumPath));
 	assert.equal(err.name, "helium-paths");

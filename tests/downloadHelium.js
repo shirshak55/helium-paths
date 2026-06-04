@@ -13,14 +13,38 @@ const EXTENSIONS = {
 	linux: [".AppImage", ".tar.xz", ".deb"],
 };
 
+const FORMAT_EXTENSIONS = {
+	appimage: [".AppImage"],
+	deb: [".deb"],
+	dmg: [".dmg"],
+	installer: [".exe"],
+	tarball: [".tar.xz"],
+	zip: [".zip"],
+};
+
 // Map Node's process.arch to substrings that commonly appear in asset names.
 const ARCH_HINTS = {
 	arm64: ["arm64", "aarch64"],
 	x64: ["x86_64", "x64", "amd64"],
 };
 
+function selectedExtensions(platform) {
+	const format = process.argv.includes("--format")
+		? process.argv[process.argv.indexOf("--format") + 1]
+		: undefined;
+	if (!format) return EXTENSIONS[platform];
+
+	const exts = FORMAT_EXTENSIONS[format];
+	if (!exts) {
+		throw new Error(
+			`Unknown format: ${format}. Known formats: ${Object.keys(FORMAT_EXTENSIONS).join(", ")}`,
+		);
+	}
+	return exts;
+}
+
 function pickAsset(assets, platform) {
-	const exts = EXTENSIONS[platform];
+	const exts = selectedExtensions(platform);
 	const archHints = ARCH_HINTS[process.arch] ?? [];
 
 	const matchesExt = (name) => exts.some((ext) => name.toLowerCase().endsWith(ext.toLowerCase()));
