@@ -1,0 +1,81 @@
+name: tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run knip
+
+  # Deterministic unit tests: drive process.platform to exercise every resolver.
+  # These need no browser and run on all supported operating systems and Node lines.
+  unit:
+    name: unit (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # Integration test: install the real Helium browser, then launch it.
+  e2e:
+    name: e2e (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install Helium (macOS)
+        if: runner.os == 'macOS'
+        run: brew install --cask helium-browser
+
+      - name: Install Helium (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          winget source update
+          winget install --id ImputNet.Helium --exact --source winget --accept-source-agreements --accept-package-agreements --silent --disable-interactivity
+
+      - name: Install Helium (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://pkg.helium.computer/helium.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/helium.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/helium.gpg] https://pkg.helium.computer/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/helium.list
+          sudo apt-get update
+          sudo apt-get install -y helium-bin
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:e2e

@@ -1,0 +1,62 @@
+{
+  "name": "helium-paths",
+  "version": "1.0.0",
+  "description": "Get the path of the Helium browser binary easily across macOS, Windows and Linux",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shirshak55/helium-paths.git"
+  },
+  "homepage": "https://github.com/shirshak55/helium-paths#readme",
+  "bugs": "https://github.com/shirshak55/helium-paths/issues",
+  "author": "shirshak",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "browser",
+    "helium",
+    "helium-browser",
+    "paths",
+    "helium-paths",
+    "chromium",
+    "exists",
+    "path"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "watch": "tsc --watch",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "lint": "oxlint src tests",
+    "format": "oxfmt src tests",
+    "format:check": "oxfmt --check src tests",
+    "knip": "knip",
+    "download:helium": "node tests/downloadHelium.js",
+    "pretest": "npm run build",
+    "test": "node --test tests/unit.test.js",
+    "test:e2e": "node tests/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "knip": "^6.15.0",
+    "oxfmt": "^0.53.0",
+    "oxlint": "^1.68.0",
+    "typescript": "^5.9.3"
+  }
+}

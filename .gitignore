@@ -1,0 +1,11 @@
+node_modules/
+*.log
+npm-debug.log*
+.DS_Store
+
+# downloaded browser artifacts from tests/downloadHelium.js
+helium-*.dmg
+helium-*.exe
+helium-*.AppImage
+helium-*.deb
+helium-*.tar.xz
