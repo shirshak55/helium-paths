@@ -43,6 +43,14 @@ function setEnv(key, value) {
 	}
 }
 
+function escapeDesktopExecPath(filePath) {
+	return filePath.replaceAll("\\", "\\\\").replaceAll(" ", "\\ ");
+}
+
+function escapeQuotedDesktopExecPath(filePath) {
+	return escapeDesktopExecPath(filePath).replaceAll('"', '\\"');
+}
+
 test("win32 builds imput\\Helium\\Application\\chrome.exe candidates", () => {
 	const saved = {
 		LOCALAPPDATA: process.env.LOCALAPPDATA,
@@ -87,9 +95,10 @@ function withLinuxDesktop({ fileName, exec, makeBinary, putBinaryOnPath }, fn) {
 		binaryPath = path.join(base, makeBinary);
 		writeFileSync(binaryPath, "#!/bin/sh\necho 'Helium 0.0.0'\n", { mode: 0o755 });
 	}
+	const escapedBinaryPath = binaryPath ? escapeDesktopExecPath(binaryPath) : "";
 	execLine = execLine
-		.replaceAll("__BIN__", binaryPath || "")
-		.replaceAll("__BIN_ESCAPED__", (binaryPath || "").replaceAll(" ", "\\ "))
+		.replaceAll("__BIN__", binaryPath ? escapeQuotedDesktopExecPath(binaryPath) : "")
+		.replaceAll("__BIN_ESCAPED__", escapedBinaryPath)
 		.replaceAll("__MARKER__", markerPath);
 	writeFileSync(
 		path.join(appsDir, fileName),
