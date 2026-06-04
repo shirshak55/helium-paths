@@ -136,6 +136,19 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      - run: npm run test:e2e
+
+      - name: Install Linux e2e runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Run integration test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
         env:
           APPIMAGE_EXTRACT_AND_RUN: ${{ matrix.target.install == 'appimage' && '1' || '' }}
+
+      - name: Run integration test (macOS/Windows)
+        if: runner.os != 'Linux'
+        run: npm run test:e2e

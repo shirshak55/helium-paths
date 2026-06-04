@@ -19,10 +19,11 @@ async function check(binaryPathFunc, shouldBe) {
 
 	if (process.platform !== "win32") {
 		console.log("Checking for version");
-		const { stdout } = await promisify(execFile)(pth, ["--version"]);
-		console.log("Version is", stdout.trim());
+		const { stdout, stderr } = await promisify(execFile)(pth, ["--version"]);
+		const versionOutput = `${stdout}\n${stderr}`.trim();
+		console.log("Version is", versionOutput);
 
-		if (stdout.trim().toLowerCase().includes(shouldBe)) {
+		if (new RegExp(`(^|\\n)\\s*${shouldBe}\\s+\\d`, "i").test(versionOutput)) {
 			console.log(`Passed: ${pth}`);
 		} else {
 			throw `Couldn't get ${pth} working`;
