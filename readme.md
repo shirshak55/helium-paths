@@ -61,6 +61,10 @@ $ npm install helium-paths
 
 // or
 
+$ pnpm add helium-paths
+
+// or
+
 $ yarn add helium-paths
 ```
 
