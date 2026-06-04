@@ -60,6 +60,14 @@ jobs:
             install: appimage
           - os: ubuntu-latest
             install: tarball
+          - os: ubuntu-24.04-arm
+            install: deb-repo
+          - os: ubuntu-24.04-arm
+            install: deb-file
+          - os: ubuntu-24.04-arm
+            install: appimage
+          - os: ubuntu-24.04-arm
+            install: tarball
           - os: windows-latest
             install: winget
           - os: macos-latest
@@ -110,6 +118,23 @@ jobs:
           appimage="$(find . -maxdepth 1 -name '*.AppImage' -print -quit)"
           test -n "$appimage"
           sudo install -Dm755 "$appimage" /opt/helium/helium.AppImage
+          if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ] \
+            && [ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" != "0" ] \
+            && command -v aa-enabled > /dev/null \
+            && [ "$(aa-enabled)" = "Yes" ] \
+            && command -v apparmor_parser > /dev/null; then
+            sudo tee /etc/apparmor.d/helium-appimage > /dev/null <<'EOF'
+          abi <abi/4.0>,
+          include <tunables/global>
+
+          profile helium-appimage "/opt/helium/helium.AppImage" flags=(default_allow) {
+            userns,
+            include if exists <local/helium-appimage>
+          }
+          EOF
+            sudo chmod 644 /etc/apparmor.d/helium-appimage
+            sudo apparmor_parser -r /etc/apparmor.d/helium-appimage
+          fi
           sudo tee /usr/share/applications/helium.desktop > /dev/null <<'EOF'
           [Desktop Entry]
           Type=Application
@@ -137,15 +162,9 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Install Linux e2e runtime dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-
       - name: Run integration test (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run test:e2e
+        run: npm run test:e2e
         env:
           APPIMAGE_EXTRACT_AND_RUN: ${{ matrix.target.install == 'appimage' && '1' || '' }}
 

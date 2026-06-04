@@ -5,6 +5,8 @@ import { promisify } from "node:util";
 
 console.log("Testing Helium Browser");
 
+const VERSION_TIMEOUT_MS = 5_000;
+
 async function check(binaryPathFunc, shouldBe) {
 	shouldBe = shouldBe.toLowerCase();
 
@@ -19,7 +21,10 @@ async function check(binaryPathFunc, shouldBe) {
 
 	if (process.platform !== "win32") {
 		console.log("Checking for version");
-		const { stdout, stderr } = await promisify(execFile)(pth, ["--version"]);
+		const { stdout, stderr } = await promisify(execFile)(pth, ["--version"], {
+			timeout: VERSION_TIMEOUT_MS,
+			killSignal: "SIGKILL",
+		});
 		const versionOutput = `${stdout}\n${stderr}`.trim();
 		console.log("Version is", versionOutput);
 
