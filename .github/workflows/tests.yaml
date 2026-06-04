@@ -70,7 +70,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo install -d -m 0755 /etc/apt/keyrings
-          curl -fsSL https://pkg.helium.computer/helium.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/helium.gpg
+          curl -fsSL https://raw.githubusercontent.com/imputnet/helium-linux/main/pubkey.asc | sudo gpg --dearmor -o /etc/apt/keyrings/helium.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/helium.gpg] https://pkg.helium.computer/deb stable main" \
             | sudo tee /etc/apt/sources.list.d/helium.list
           sudo apt-get update
